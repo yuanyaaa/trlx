@@ -23,6 +23,7 @@ def train(  # noqa: C901
     metric_fn: Optional[Callable[[List[str], List[str], List[str]], Dict[str, List[float]]]] = None,
     config: Optional[TRLConfig] = None,
     stop_sequences: Optional[List[str]] = [],
+    save_args: Optional[Dict[str, str]] = None,
 ):
     """
     Dispatches online, offline reinforcement training or supervised finetuning
@@ -94,9 +95,7 @@ def train(  # noqa: C901
         if eval_prompts is None:
             eval_prompts = prompts[:batch_size]
 
-        pipeline = get_pipeline(config.train.pipeline)(
-            prompts, max_prompt_length, trainer.tokenizer, add_special_tokens=config.model.model_arch_type == "seq2seq"
-        )
+        pipeline = get_pipeline(config.train.pipeline)(prompts, max_prompt_length, trainer.tokenizer)
         trainer.add_prompt_pipeline(pipeline)
 
         if eval_prompts is None:
@@ -120,9 +119,7 @@ def train(  # noqa: C901
     else:
         raise ValueError("Either `samples` or `reward_fn` should be given for training")
 
-    eval_pipeline = get_pipeline(config.train.pipeline)(
-        eval_prompts, max_prompt_length, trainer.tokenizer, add_special_tokens=config.model.model_arch_type == "seq2seq"
-    )
+    eval_pipeline = get_pipeline(config.train.pipeline)(eval_prompts, max_prompt_length, trainer.tokenizer)
     trainer.add_eval_pipeline(eval_pipeline)
 
     trainer.learn()

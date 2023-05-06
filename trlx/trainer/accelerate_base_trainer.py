@@ -89,7 +89,8 @@ class AccelerateRLTrainer(BaseRLTrainer):
             num_gpus = f"{self.accelerator.num_processes}gpus"
         branch = get_git_tag()[0]
 
-        run_name = "/".join([script_name, model_name, num_gpus]) + f":{branch}"
+        file_to_save = "-".join([str(_arg) for _arg in kwargs["save_args"].values()])
+        run_name = "/".join([script_name, model_name, num_gpus]) + f":{branch}-{file_to_save}"
 
         if self.accelerator.is_main_process:
             config_dict = self.config.to_dict()
@@ -493,6 +494,15 @@ class AccelerateRLTrainer(BaseRLTrainer):
         """
         logger.info("Starting training")
 
+        self.generate_sweep_kwarg = None
+        for k, v in self.config.method.gen_kwargs.items():
+            if isinstance(v, list):
+                if self.generate_sweep_kwarg is not None:
+                    logger.info("Only a single sweep is allowed, {k} is going to be set to {v[0]}")
+                    self.generate_kwargs[k] = v[0]
+                else:
+                    self.generate_sweep_kwarg = (k, v)
+
         self.prepare_learning()
         self.iter_count = 0
         self.nth_evaluation = 0
@@ -621,11 +631,6 @@ class AccelerateRLTrainer(BaseRLTrainer):
     @abstractmethod
     def loss(self, batch) -> Tuple[float, Dict]:
         """Compute loss on a batch from `store` and return some statistics"""
-        pass
-
-    @abstractmethod
-    def prepare_learning(self):
-        """Do something before the start of training"""
         pass
 
     @abstractmethod
