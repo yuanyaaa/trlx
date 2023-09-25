@@ -111,6 +111,7 @@ class PPOConfig(MethodConfig):
 
     :param gen_experience_kwargs: if this is not None, then the experience is generated using this
     :type gen_experience_kwargs: Dict[str, Any]
+
     """
 
     ppo_epochs: int
@@ -194,7 +195,11 @@ class PPOConfig(MethodConfig):
         vf_loss2 = (values_clipped - returns) ** 2
         vf_loss = 0.5 * torch.sum(torch.max(vf_loss1, vf_loss2) * mask) / n
         vf_clipfrac = torch.sum((vf_loss2 > vf_loss1).float() * mask) / n
-
+        old_logprobs = torch.clamp(
+            old_logprobs,
+            -50,
+            100
+        )
         log_ratio = (logprobs - old_logprobs) * mask
         ratio = torch.exp(log_ratio)
         # Unbiased KL-div estimates (`k3`). Ref: http://joschu.net/blog/kl-approx.html
@@ -217,6 +222,9 @@ class PPOConfig(MethodConfig):
                 total_loss=loss.item(),
                 policy_loss=pg_loss.item(),
                 value_loss=vf_loss.item(),
+                old_logprobs_max=old_logprobs.max().item(),
+                old_logprobs_min=old_logprobs.min().item(),
+
             ),
             values=dict(
                 get_tensor_stats(values, mask, n),

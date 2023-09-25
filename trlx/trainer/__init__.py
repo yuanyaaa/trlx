@@ -41,6 +41,7 @@ class BaseRLTrainer:
         logit_mask=None,
         stop_sequences=None,
         train_mode=False,
+        save_args=None,
     ):
         self.store: BaseRolloutStore = None
         self.config = config

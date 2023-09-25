@@ -23,6 +23,8 @@ def train(  # noqa: C901
     metric_fn: Optional[Callable[[List[str], List[str], List[str]], Dict[str, List[float]]]] = None,
     config: Optional[TRLConfig] = None,
     stop_sequences: Optional[List[str]] = [],
+    save_args: Optional[Dict[str, str]] = None,
+    samples_weight: Optional[List[float]] = None,
 ):
     """
     Dispatches online, offline reinforcement training or supervised finetuning
@@ -76,6 +78,8 @@ def train(  # noqa: C901
     if model_path:
         config.model.model_path = model_path
 
+    config.train.trainer_kwargs.update({"samples_weight": samples_weight})
+    config.train.trainer_kwargs.update({"save_args": save_args})
     trainer = get_trainer(config.train.trainer)(
         config=config,
         reward_fn=reward_fn,

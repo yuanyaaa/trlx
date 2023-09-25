@@ -8,6 +8,7 @@ from torch.utils.data import DataLoader
 
 from trlx.data.ppo_types import PPORLBatch, PPORLElement
 from trlx.pipeline import BaseRolloutStore
+from trlx.utils.sampler import WeightDecaySampler
 
 
 class PPORolloutStorage(BaseRolloutStore):
@@ -15,9 +16,10 @@ class PPORolloutStorage(BaseRolloutStore):
     Rollout storage for training PPO
     """
 
-    def __init__(self, pad_token_id):
+    def __init__(self, pad_token_id, samples_weight):
         super().__init__()
 
+        self.samples_weight = samples_weight
         self.pad_token_id = pad_token_id
         self.history: Iterable[PPORLElement] = [None]
 
@@ -76,5 +78,8 @@ class PPORolloutStorage(BaseRolloutStore):
                     batch_first=True,
                 ),
             )
-
-        return DataLoader(self, batch_size, shuffle=shuffle, collate_fn=collate_fn)
+        ##################### weight decay #######################
+        sampler = WeightDecaySampler(self.samples_weight.type('torch.DoubleTensor'))
+        return DataLoader(self, batch_size, sampler=sampler, collate_fn=collate_fn)
+        ##################### weight decay #######################
+        # return DataLoader(self, batch_size, shuffle=shuffle, collate_fn=collate_fn)

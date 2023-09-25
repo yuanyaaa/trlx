@@ -34,7 +34,7 @@ logger = logging.get_logger(__name__)
 class AcceleratePPOTrainer(AccelerateRLTrainer):
     """PPO Accelerate Trainer"""
 
-    reward_fn: Callable[[List[str], List[str], List[str]], List[float]]
+    # reward_fn Callable[[List[str], List[str], List[str]], List[float]]
     tokenizer: AutoTokenizer
 
     def __init__(self, config: TRLConfig, **kwargs):
@@ -43,6 +43,8 @@ class AcceleratePPOTrainer(AccelerateRLTrainer):
         Args:
             config: Config
         """
+        samples_weight = kwargs["samples_weight"]
+        kwargs.pop("samples_weight")
         super().__init__(config, **kwargs)
 
         # Setup rollout logging
@@ -54,7 +56,7 @@ class AcceleratePPOTrainer(AccelerateRLTrainer):
 
         # Setup the rollout store
         # Rollouts contain the prompt & response, log probs, values and rewards - from each rollout
-        self.store = PPORolloutStorage(self.tokenizer.pad_token_id)
+        self.store = PPORolloutStorage(self.tokenizer.pad_token_id, samples_weight)
 
         # Create the rollout store dataloader (for batching up rollouts)
         # TODO (jon-tow): This is only used to satisfy to `accelerator.prepare` call constraint below - remove in future
@@ -194,6 +196,8 @@ class AcceleratePPOTrainer(AccelerateRLTrainer):
                 attention_mask[:, start:end],
             )
 
+        # print(f"logprobs: {logprobs}")
+        # print(f"old_logprobs: {old_logprobs}")
         loss, stats = self.config.method.loss(
             logprobs=logprobs,
             values=values_pred,
@@ -309,7 +313,8 @@ class AcceleratePPOTrainer(AccelerateRLTrainer):
                 rollout_score_time = time()
                 all_scores = torch.tensor(
                     self.reward_fn(
-                        samples=all_str_samples, prompts=all_str_prompts, outputs=all_str_outputs, **metadata
+                        samples=all_str_samples, prompts=all_str_prompts, outputs=all_str_outputs, model=self.model, **metadata
+                        # samples=all_str_samples, prompts=all_str_prompts, outputs=all_str_outputs, **metadata
                     ),
                     dtype=torch.float,
                     device=device,

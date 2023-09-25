@@ -55,7 +55,8 @@ class AccelerateRLTrainer(BaseRLTrainer):
             self.mb_size = config.train.batch_size
         self.num_mb = config.train.batch_size // self.mb_size
         self.mb_count = 0
-        self.accelerator = Accelerator(log_with=config.train.tracker, logging_dir=config.train.logging_dir)
+        # self.accelerator = Accelerator(log_with=config.train.tracker, logging_dir=config.train.logging_dir)
+        self.accelerator = Accelerator(log_with=config.train.tracker, project_dir=config.train.logging_dir)
 
         if self.accelerator.state.deepspeed_plugin is not None:
             # by accelerate's default, arguments in `model.forward` would be casted to half
@@ -89,7 +90,9 @@ class AccelerateRLTrainer(BaseRLTrainer):
             num_gpus = f"{self.accelerator.num_processes}gpus"
         branch = get_git_tag()[0]
 
-        run_name = "/".join([script_name, model_name, num_gpus]) + f":{branch}"
+        file_to_save = "-".join([str(_arg) for _arg in kwargs["save_args"].values()])
+        run_name = "/".join([script_name, model_name, num_gpus]) + f":{branch}-{file_to_save}"
+        # run_name = "/".join([script_name, model_name, num_gpus]) + f":{branch}"
 
         if self.accelerator.is_main_process:
             config_dict = self.config.to_dict()
@@ -393,7 +396,8 @@ class AccelerateRLTrainer(BaseRLTrainer):
                 if self.reward_fn:
                     logger.info("Computing rewards")
                     rewards = torch.tensor(
-                        self.reward_fn(samples=str_samples, prompts=str_prompts, outputs=str_outputs, **metadata),
+                        self.reward_fn(samples=str_samples, prompts=str_prompts, outputs=str_outputs, model=self.model, **metadata),
+                        # self.reward_fn(samples=str_samples, prompts=str_prompts, outputs=str_outputs, **metadata),
                         dtype=float,
                     )
                     mean_reward = rewards.mean().item()
@@ -407,7 +411,8 @@ class AccelerateRLTrainer(BaseRLTrainer):
                 if self.metric_fn:
                     logger.info("Computing metrics")
                     metric_time = time()
-                    metrics = self.metric_fn(samples=str_samples, prompts=str_prompts, outputs=str_outputs, **metadata)
+                    metrics = self.metric_fn(samples=str_samples, prompts=str_prompts, outputs=str_outputs, model=self.model, **metadata)
+                    # metrics = self.metric_fn(samples=str_samples, prompts=str_prompts, outputs=str_outputs, **metadata)
                     stats["time/metric"] = time() - metric_time
 
                     mean_metrics = {
