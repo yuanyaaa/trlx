@@ -16,11 +16,12 @@ class PPORolloutStorage(BaseRolloutStore):
     Rollout storage for training PPO
     """
 
-    def __init__(self, pad_token_id, samples_weight):
+    def __init__(self, pad_token_id, padding_side, samples_weight):
         super().__init__()
 
         self.samples_weight = samples_weight
         self.pad_token_id = pad_token_id
+        self.padding_side = padding_side
         self.history: Iterable[PPORLElement] = [None]
 
     def push(self, exps: Iterable[PPORLElement]):
@@ -53,13 +54,23 @@ class PPORolloutStorage(BaseRolloutStore):
         shuffle: bool,
     ) -> DataLoader:
         def collate_fn(elems: Iterable[PPORLElement]):
-            return PPORLBatch(
+            if self.padding_side == "right":
+                # Right padding of already right-padded queries
+                query_tensors = pad_sequence(
+                    [elem.query_tensor for elem in elems],
+                    padding_value=self.pad_token_id,
+                    batch_first=True,
+                )
+            else:
                 # Left padding of already left-padded queries
-                pad_sequence(
+                query_tensors = pad_sequence(
                     [elem.query_tensor.flip(0) for elem in elems],
                     padding_value=self.pad_token_id,
                     batch_first=True,
-                ).flip(1),
+                ).flip(1)
+
+            return PPORLBatch(
+                query_tensors,
                 # Right pad the rest, to have a single horizontal query/response split
                 pad_sequence(
                     [elem.response_tensor for elem in elems],
