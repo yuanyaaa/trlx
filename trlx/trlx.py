@@ -85,7 +85,7 @@ def train(  # noqa: C901
         reward_fn=reward_fn,
         metric_fn=metric_fn,
         stop_sequences=stop_sequences,
-        save_args=save_args,
+        # save_args=save_args,
         **config.train.trainer_kwargs,
     )
 
