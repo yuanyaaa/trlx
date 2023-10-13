@@ -79,7 +79,7 @@ class PPORolloutStorage(BaseRolloutStore):
                 ),
             )
         ##################### weight decay #######################
-        sampler = WeightDecaySampler(self.samples_weight.type('torch.DoubleTensor'))
-        return DataLoader(self, batch_size, sampler=sampler, collate_fn=collate_fn)
+        # sampler = WeightDecaySampler(self.samples_weight.type('torch.DoubleTensor'))
+        # return DataLoader(self, batch_size, sampler=sampler, collate_fn=collate_fn)
         ##################### weight decay #######################
-        # return DataLoader(self, batch_size, shuffle=shuffle, collate_fn=collate_fn)
+        return DataLoader(self, batch_size, shuffle=shuffle, collate_fn=collate_fn)
